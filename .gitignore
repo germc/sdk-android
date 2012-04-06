@@ -1,0 +1,26 @@
+#Git ignore file so that we can use both a mercurial repo and a git repo.
+
+#android specific ignore
+bin/*
+
+#we do want the jar files however
+!*.jar
+!*.sh
+
+gen
+
+build.xml
+local.properties
+
+demo-sdks
+
+#mac os x files
+.DS_Store
+
+encode/output
+
+#mercurial files
+.hg
+.hgignore
+
+

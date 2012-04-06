@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="hello">Hello World, SampleApp!</string>
+    <string name="app_name">playhaven-sdk</string>
+    <string name="token">token</string>
+    <string name="secret_key">secret key</string>
+    <string name="placement_text">Placement ID (default: level_complete)</string>
+    <string name="start_button_text">Start</string>
+</resources>

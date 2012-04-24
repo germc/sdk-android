@@ -4,7 +4,6 @@ import org.json.JSONObject;
 
 import android.graphics.Canvas;
 import android.graphics.Rect;
-import android.graphics.RectF;
 
 /** Simple interface for drawing the actual notification.  You must return the size
  * of the notification as well as do the actual drawing. The width varies depending

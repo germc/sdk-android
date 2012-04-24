@@ -8,7 +8,6 @@ import android.graphics.Color;
 import android.graphics.Paint;
 import android.graphics.Rect;
 import android.graphics.drawable.NinePatchDrawable;
-import android.util.DisplayMetrics;
 
 import com.playhaven.resources.PHNinePatchResource;
 import com.playhaven.resources.PHResourceManager;

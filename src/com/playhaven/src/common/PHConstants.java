@@ -124,12 +124,9 @@ public class PHConstants {
 
 				device_info.put("os_version", Integer.toString(Build.VERSION.SDK_INT));
 				
-				device_info.put("original_width", String.valueOf(getAvailableWidth(context)));
+				device_info.put("original_width", String.valueOf(context.getResources().getDisplayMetrics().widthPixels));
 				
-				device_info.put("original_height", String.valueOf(getAvailableHeight(context)));
-				
-				//Note: disabled becauase it requires invasive permissions
-				//device_info.put("connection", String.valueOf(getConnectionType(context)));
+				device_info.put("original_height", String.valueOf(context.getResources().getDisplayMetrics().heightPixels));
 				
 				densityType = context.getResources().getDisplayMetrics().densityDpi;
 				
@@ -146,6 +143,7 @@ public class PHConstants {
 
 		}
 		
+		@SuppressWarnings("unused")
 		private int getConnectionType(Context context) {
 			ConnectivityManager cm = (ConnectivityManager)context.getSystemService(Context.CONNECTIVITY_SERVICE);
 			NetworkInfo info = cm.getActiveNetworkInfo();
@@ -286,7 +284,7 @@ public class PHConstants {
 		}
 		
 		public String getSDKVersion() {	
-			return "1.10.0";
+			return "1.10.1";
 		}
 		
 		public int getProtocolVersion() {
@@ -592,6 +590,7 @@ public class PHConstants {
 		/** Modify template url to point to the staging template version (on the server - not local).
 		 * @deprecated should be moved to own Staging subclass
 		*/
+		@SuppressWarnings("unused")
 		private Uri getStagingTemplateURL(Uri prod_url) {
 			String dev_url = prod_url.toString().replaceAll("\\/\\w{40}\\/", "/"+devTemplateId+"/");
 			return Uri.parse(dev_url);
@@ -708,6 +707,7 @@ public class PHConstants {
 		return environment.dipToPixels(dip);
 	}
 	
+	@SuppressWarnings("unused")
 	private static boolean didSetKeys() {
 		return environment.didSetKeys();
 	}

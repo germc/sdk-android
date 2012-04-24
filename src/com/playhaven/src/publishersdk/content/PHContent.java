@@ -96,8 +96,10 @@ public class PHContent implements Parcelable {
 
 				Object frame = dict.get("frame");
 				if (frame instanceof String)
-					setFrameDict(new JSONObject(String.format(
-							"{\"%s\" : \"%s\"}", frame, frame))); //may be PH_FULLSCREEN
+				{
+					frameDict.clear();
+					frameDict.put((String) frame, new JSONObject(String.format("{\"%s\" : \"%s\"}", frame, frame)));
+				}
 				else if (frame instanceof JSONObject)
 					setFrameDict((JSONObject) frame);
 

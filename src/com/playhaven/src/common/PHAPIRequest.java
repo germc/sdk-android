@@ -133,7 +133,7 @@ public class PHAPIRequest implements PHAsyncRequest.PHAsyncRequestDelegate {
 		if(signedParams == null) {
 			String device, nonce, sigHash, sig, appId, appVersion, hardware, 
 			os, idiom, sdk_version, width, height, sdk_platform, orientation,
-			connection, screen_density;
+			screen_density;
 			
 			//os = "iPhone+OS+4.3";
 			//hardware = "i386";

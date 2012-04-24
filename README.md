@@ -1,4 +1,4 @@
-PlayHaven Android SDK 1.10.0
+PlayHaven Android SDK 1.10.1
 ====================
 PlayHaven is a real-time mobile game marketing platform to help you take control of the business of your games.
 
@@ -6,7 +6,13 @@ Acquire, retain, re-engage, and monetize your players with the help of PlayHaven
 
 An API token and secret is required to use this SDK. These tokens uniquely identify your app to PlayHaven and prevent others from making requests to the API on your behalf. To get a token and secret, please visit the PlayHaven developer dashboard at https://dashboard.playhaven.com
 
-What's new in 1.10.0
+What's new in 1.10.1
+===================
+* Fixed Full screen content not showing up.
+* Fixed "market://" exception causing content templates not to close on redirect.
+* Crash on launch of Sample App.
+
+1.10.0
 ===================
 * Support for Rewards. See "Unlocking rewards with the SDK" in the API Reference section for information on how to integrate this into your app.
 * Bug fixes to support new content types
@@ -18,7 +24,7 @@ What's new in 1.10.0
 * Speed up of HTTP requests. Set protocol to HTTP 1.1 and call getHostName() on first API request for both api2.playhaven.com and media.playhaven.com to speed up DNS resolution.
 * Various other bug fixes and code cleanup
 
-What's new in 1.8.0
+1.8.0
 ===================
 * Content templates now use Activities for there views
 
@@ -30,8 +36,11 @@ What's new in 1.8.0
 Usage
 =====
 
+There are three options for using the PlayHaven SDK in your Android project. The first is to include the "sdk-android.jar" binary provided in the GIT repository in the "release" folder. The second option is to build the JAR file yourself and include it in your project. The last option is to include the "sdk-android" project into yours. In this section we will talk about option 1 and 2:
 
-1) Select *bin/playhaven-1.3.10.jar* and click __raw__ to download
+#### Option 1:
+
+1) Select *release/sdk-android.jar* and click __raw__ to download
 
 <img src="http://i990.photobucket.com/albums/af25/flashpro/playhaven%20android%20sdk/bin.png" style="padding: 5px" />
 
@@ -57,8 +66,16 @@ Usage
 
 6) You're done!
 
+#### Option 2:
 
-Note: If you are using Unity for your game, please integrate the Android Unity SDK located here: [unity sdk link].
+1) Make a clone of the PlayHaven sdk-android repository (https://tomdiz@github.com/playhaven/sdk-android.git).
+
+2) Create a new workspace in Eclipse or import the PlayHaven sdk-android project into a workspace you alreay have created.
+
+3) The default property for the sdk-android project is to create a "sdk-android.jar" file in the bin folder. You can then add that path to your project JAR search directories or follow instructions in option 1 above to put into a "libs" folder.
+
+
+Note: If you are using Unity for your game, please integrate the Android Unity SDK located here http://www.playhaven.com/sdk
 
 Using the Android SDK
 --------------------- 
@@ -83,17 +100,6 @@ You need to add the following to your Android Manifest for Play Haven SDK to fun
 ```
 
 
-## Cleanup
-You must call the cleanup method (with the __original__ content request):
-
-```java
-public void onDestroy() {
-	super.onDestroy();
-	
-	PHPublisherContentRequest.appStateChangeDismiss(contentRequest);
-}
-```
-
 Example App
 ===========
 Included with the SDK is an example implementation in the 'com.playhaven.sampleapp' package of the source root (it is not included in the .jar file). 
@@ -105,6 +111,8 @@ It features open and content request implementations including relevant delegate
 Running the example app is straightforward; simply download the entire repository, then import into Eclipse. You can import the Playhaven project into Eclipse via __File > Import__ command.
 
 Once the project is open, simply create a new Android run configuration via __Run > Run Configurations...__ to run the sample app.
+
+*NOTE:* The default setting is for the project to create the "sdk-android.jar" file. To build and run the test application goto Project->Properties and select the "Android" option. Make sure the "Is Library" checkbox is unchecked.
 
 
 API Reference
@@ -118,6 +126,7 @@ PHConstants.setKeys(token, secret);
 PHPublisherOpenRequest request = new PHPublisherOpenRequest(this);
 request.send();
 ```
+In this example code the PHPublisherOpenRequest takes a parameter of the following type PHAPIRequestDelegate. This is usually an Andoird Activity or some other type of class that will be recieving and processing the PlayHaven SDK callbacks using the PHAPIRequestDelegate interface. There are various constructors you can use when making an Open Request. Check the sdk-android PHPublisherOpenRequest.java for others.
 
 #### Precaching content templates
 PlayHaven will automatically download and store a number of content templates after a successful PHPublisherOpenRequest. This happens automatically in the background after each open request, so there's no integration required to take advantage of this feature.
@@ -128,12 +137,15 @@ You may request content for your app using your API token, secret, as well as a 
 ```java
 PHConstants.findDeviceInfo(this);
 PHConstants.setKeys(token, secret);
-PHPublisherContentRequest request = new PHPublisherContentRequest(this, this);
+PHPublisherContentRequest request = new PHPublisherContentRequest(this, this);	// The 'this' is an Activity that also supports the PHPublisherContentRequestDelegate interface
 request.delegate = <your class>; // This is a class you may define to implement the PHPublisherContentRequestDelegate so that you are notified of the content state, see methods below
 request.placement = "placement_ID";
-request.showsOverlayImmediately = YES; //optional, see below.
+request.setOverlayImmediately(true); //optional, see below.
 request.send();
 ```
+
+In this example code the PHPublisherContentRequest takes 2 parameters of the following type PHPublisherContentRequestDelegate and a Activity. The delegate is usually an Andoird Activity or some other type of class that will be recieving and processing the PlayHaven SDK callbacks. There are various constructors you can use when making an Content Request. Check the sdk-android PHPublisherContentRequest.java for others.
+
 
 *NOTE:* You may set placement_ids through the PlayHaven Developer Dashboard.
 
@@ -152,6 +164,12 @@ request.preload();
 ```
 
 You may implement a delegate for your preload if you would like to be informed when a content request is ready to display. See the sections below for more details.
+
+To show the preloaded request just call the send() method.
+
+```java
+request.send();
+```
 
 *NOTE:* Preloading only affects the next content request for a given placement. If you are showing the same placement multiple times in your app, you will need to make additional preload requests after displaying that placement's content unit for the first time.
 

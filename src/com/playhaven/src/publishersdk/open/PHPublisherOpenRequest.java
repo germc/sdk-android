@@ -1,7 +1,5 @@
 package com.playhaven.src.publishersdk.open;
 
-import java.io.File;
-
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;

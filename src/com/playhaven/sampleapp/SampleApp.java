@@ -2,19 +2,19 @@ package com.playhaven.sampleapp;
 
 import java.util.ArrayList;
 
+import android.app.AlertDialog;
 import android.app.ListActivity;
 import android.content.Context;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.os.Bundle;
+import android.preference.PreferenceManager;
+import android.util.Patterns;
 import android.view.LayoutInflater;
 import android.view.View;
-import android.view.ViewGroup;
-import android.view.View.OnClickListener;
 import android.widget.AdapterView;
-import android.widget.Button;
 import android.widget.AdapterView.OnItemClickListener;
 import android.widget.EditText;
-import android.widget.ListView;
 import android.widget.TextView;
 
 import com.playhaven.androidsdk.R;
@@ -55,7 +55,31 @@ public class SampleApp extends ListActivity {
 		getListView().addHeaderView(view);
 	}
 
-	private void setupTokenAndKey() {
+	private void initializeEditTextFields() {
+        SharedPreferences sharedPrefs = PreferenceManager.getDefaultSharedPreferences(this);
+        String server_addr = sharedPrefs.getString("server_address", "NULL");
+        String token = sharedPrefs.getString("token", "NULL");
+        String secret = sharedPrefs.getString("secret", "NULL");
+
+		if (server_addr != "NULL") {
+			EditText serverAddressEditText = (EditText) findViewById(R.id.editTextServeraddress);
+			serverAddressEditText.setHint(server_addr);
+			serverAddressEditText.setText(server_addr);
+		}
+		if (token != "NULL") {
+			EditText tokenEditText = (EditText) findViewById(R.id.editTextToken);
+			tokenEditText.setHint(token);
+			tokenEditText.setText(token);
+		}
+		if (secret != "NULL") {
+			EditText secretKeyEditText = (EditText) findViewById(R.id.editTextSecretKey);
+			secretKeyEditText.setHint(secret);
+			secretKeyEditText.setText(secret);
+		}
+	}
+	
+	private boolean setupTokenAndKey() {
+		boolean validURL = false;
 		EditText tokenEditText = (EditText) findViewById(R.id.editTextToken);
 		String tokenValue = tokenEditText.getText().toString();
 		EditText secretKeyEditText = (EditText) findViewById(R.id.editTextSecretKey);
@@ -64,6 +88,34 @@ public class SampleApp extends ListActivity {
 			PHConstants.setKeys("", "");
 		else
 			PHConstants.setKeys(tokenValue, secretValue);
+		
+		EditText serverAddressEditText = (EditText) findViewById(R.id.editTextServeraddress);
+		String serverAddrValue = serverAddressEditText.getText().toString();
+        if (serverAddrValue.length() == 0)
+        	serverAddrValue = "http://api2.playhaven.com";
+
+        if (Patterns.WEB_URL.matcher(serverAddrValue).matches())
+        {
+ 	        PHConstants.phLog("URL "+ serverAddrValue +" is valid!");
+ 	        validURL = true;
+        }
+        else
+        {
+    		AlertDialog.Builder alert = new AlertDialog.Builder(this);
+    		alert.setTitle("Invalid URL!").setMessage("Please fix URL server address.").setNeutralButton("OK", null).show();
+        	serverAddrValue = "http://api2.playhaven.com";
+        }
+
+        PHConstants.setAPIUrl(serverAddrValue);
+
+        SharedPreferences sharedPrefs = PreferenceManager.getDefaultSharedPreferences(this);
+        SharedPreferences.Editor editor = sharedPrefs.edit();
+        editor.putString("server_address", serverAddrValue);
+        editor.putString("token", tokenValue);
+        editor.putString("secret", secretValue);
+        editor.commit();
+
+        return validURL;
 	}
 
     /** Called when the activity is first created. */
@@ -72,11 +124,9 @@ public class SampleApp extends ListActivity {
         super.onCreate(savedInstanceState);
         
         setTitle("Playhaven SDK");
-        
+  
         setupTopBar();
-
-        // setup debug environment
-        PHConstants.Development dev_environ = new PHConstants.Development();
+        initializeEditTextFields();
 
     	TextView versionText = (TextView) findViewById(R.id.versionText);
     	String sdkVersion = PHConstants.getSDKVersion();
@@ -98,13 +148,17 @@ public class SampleApp extends ListActivity {
 	private void itemTapped(int position) {
 		DemoRequest request = requests.get(position - 1);	// subtract 1 because of new header add for token/secret key
 		if(request.title.equals("Open")) {
-			setupTokenAndKey();
-			Intent intent = new Intent(this, PublisherOpenView.class);
-			startActivity(intent);
+			if (setupTokenAndKey())
+			{
+				Intent intent = new Intent(this, PublisherOpenView.class);
+				startActivity(intent);
+			}
 		} else if(request.title.equals("Content")) {
-			setupTokenAndKey();
-			Intent intent = new Intent(this, PublisherContentView.class);
-			startActivity(intent);
+			if (setupTokenAndKey())
+			{
+				Intent intent = new Intent(this, PublisherContentView.class);
+				startActivity(intent);
+			}
 		}
 	}
     private void createDemoRequests() {

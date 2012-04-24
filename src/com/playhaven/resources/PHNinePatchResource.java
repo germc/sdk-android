@@ -5,7 +5,6 @@ import java.util.HashMap;
 import android.content.res.Resources;
 import android.graphics.Bitmap;
 import android.graphics.NinePatch;
-import android.graphics.Rect;
 import android.graphics.drawable.NinePatchDrawable;
 
 import com.playhaven.src.common.PHConstants;
@@ -36,10 +35,7 @@ public class PHNinePatchResource extends PHImageResource {
 			
 			//create nine patch image..
 			byte[] chunk = image.getNinePatchChunk();
-			
-			//TODO: for debugging only..
-			boolean result = NinePatch.isNinePatchChunk(chunk);
-			
+						
 			if (!NinePatch.isNinePatchChunk(chunk)) return null;
 			
 			//We use "res" to ensure correct target density is set

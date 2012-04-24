@@ -60,12 +60,14 @@ public class PHAsyncRequest extends AsyncTask<Uri, Integer, ByteBuffer> {
 	private CountDownLatch signal;
 	
 	private boolean isDownloading = true;
-	
+		
+	private PHHttpConn client;
+
+	@SuppressWarnings("unused")
 	private String username;
 	
+	@SuppressWarnings("unused")
 	private String password;
-	
-	private PHHttpConn client;
 
 	public HttpParams params;
 	

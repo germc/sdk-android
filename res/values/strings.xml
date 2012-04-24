@@ -6,4 +6,5 @@
     <string name="secret_key">secret key</string>
     <string name="placement_text">Placement ID (default: level_complete)</string>
     <string name="start_button_text">Start</string>
+    <string name="server_address">server address (http:-required)</string>
 </resources>

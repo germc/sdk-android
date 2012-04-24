@@ -3,11 +3,9 @@ package com.playhaven.src.publishersdk.content;
 import java.io.File;
 import java.lang.ref.WeakReference;
 import java.lang.reflect.Method;
-import java.net.URI;
-import java.net.URISyntaxException;
-import java.net.URL;
 import java.util.Dictionary;
 import java.util.HashMap;
+import java.util.List;
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -18,6 +16,8 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.content.pm.PackageManager;
+import android.content.pm.ResolveInfo;
 import android.graphics.Bitmap;
 import android.graphics.Color;
 import android.graphics.RectF;
@@ -184,12 +184,6 @@ public class PHContentView extends Activity implements
 			this.key = key;
 		}
 	}
-
-	public static final RectF IPAD_SCREEN_PORTRAIT = new RectF(0.0f, 0.0f,
-			768.0f, 1004.0f); // -20 for top status bar?
-
-	public static final RectF IPAD_SCREEN_LANDSCAPE = new RectF(0.0f, 0.0f,
-			1024.0f, 748.0f); // -20 for top bar
 
 	/** List of methods we can call using Reflection (like dynamic dispatch) */
 	private HashMap<String, PHInvocation> redirects = new HashMap<String, PHInvocation>();
@@ -362,6 +356,31 @@ public class PHContentView extends Activity implements
 			} else if (url.startsWith("javascript:")) {
 				PHConstants.phLog("Executing javascript..");
 				return false; // let browser handle javascript requests..
+			} else if (url.startsWith("market:")) {
+				PHConstants.phLog("Got a market:// URL, verifying store exists");
+				Context context = PHContentView.this;
+				final PackageManager packageManager = context.getPackageManager();
+				//String packagename = PHContentView.this.getPackageName();
+				//String mUrl = "market://details?id=" + packagename;
+				Intent marketplaceIntent = new Intent(Intent.ACTION_VIEW);
+				marketplaceIntent.setData(Uri.parse(url));
+				List<ResolveInfo> resolveInfo = packageManager.queryIntentActivities(marketplaceIntent,PackageManager.MATCH_DEFAULT_ONLY);
+				if (resolveInfo.size() > 0)
+				{
+					//PHConstants.phLog("Found Marketplace and Starting Intent to load it with url...");
+					//startActivity(marketplaceIntent);
+					PHConstants.phLog("Found Marketplace continue loading url...");
+					webview.loadUrl(url);
+				}
+				else
+				{
+					PHConstants.phLog("Marketplace NOT found, updating url...");
+					Uri uri = Uri.parse(url);
+					url = String.format("%s://%s%s", "https", "market.android.com", uri.getPath());
+					PHConstants.phLog("New Marketplace url = " + url);
+					webview.loadUrl(url);
+				}
+
 			} else {
 				PHConstants.phLog("Webview redirecting...");
 				webview.loadUrl(url); // handle redirect...
@@ -714,12 +733,7 @@ Manager. Since we are an
 		}
 
 		// make window transparent
-		getWindow().setBackgroundDrawable(new ColorDrawable(Color.BLUE));
-				
-		// position closeBtn in case the content view never shows..
-		placeCloseButton();
-
-		showCloseAfterTimeout(CLOSE_BTN_TIMEOUT);
+		getWindow().setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
 	}
 
 	@Override
@@ -793,7 +807,7 @@ Manager. Since we are an
 
 	private void setup() {
 		// setup all the redirect handles
-		Class cls = this.getClass();
+		Class<? extends PHContentView> cls = this.getClass();
 		try {
 			Method dismiss = cls.getMethod("handleDismiss", new Class[] { JSONObject.class });
 			Method launch = cls.getMethod("handleLaunch", new Class[] {JSONObject.class, String.class });
@@ -820,6 +834,7 @@ Manager. Since we are an
 	public void redirectRequest(String url, Object target, String method) {
 		if (target != null) {
 			// we create the Method instance
+			@SuppressWarnings("rawtypes")
 			Class cls = target.getClass();
 			// loop through until we can find the matching method
 			Method[] methods = cls.getMethods();
@@ -857,6 +872,7 @@ Manager. Since we are an
 	}
 
 	/** Testing method for javascript bridge. */
+	@SuppressWarnings("unused")
 	private void testJSBridge(WebView webview) {
 		PHJavascriptBridge bridge = new PHJavascriptBridge(webview);
 		class PlayhavenCallback extends PHJavascriptStub {
@@ -895,7 +911,7 @@ Manager. Since we are an
 		// testJSBridge(webview);
 
 		// debugging only
-		webview.setBackgroundColor(0xFFF7C66A);
+		//webview.setBackgroundColor(0xFFF7C66A);
 
 		if (!PHConstants.shouldCacheWebView())
 			webview.getSettings().setCacheMode(WebSettings.LOAD_NO_CACHE);
@@ -935,6 +951,11 @@ Manager. Since we are an
 
 		registerBroadcastReceiver();
 
+		// position closeBtn in case the content view never shows..
+		placeCloseButton();
+
+		showCloseAfterTimeout(CLOSE_BTN_TIMEOUT);
+
 		// TODO: signup for orientation notifications
 	}
 
@@ -969,8 +990,6 @@ Manager. Since we are an
 
 		int orientation = PHConstants.getDeviceOrientation(getApplicationContext());
 
-		// TODO: refactor so that we are changing *webview* not the dialog
-
 		// The coordinates have been calculted for us by the server (in our
 		// coordinates)
 		RectF contentFrame = content.getFrame(orientation);
@@ -995,8 +1014,8 @@ Manager. Since we are an
 
 	// simple display helpers
 	private void loadTemplate() {
-		if (!PHConstants.shouldCacheWebView())
-			webview.clearCache(true); // TODO: debug only!!!!
+		//if (!PHConstants.shouldCacheWebView())
+		//	webview.clearCache(true); // TODO: debug only!!!!
 
 		webview.stopLoading();
 
@@ -1176,11 +1195,9 @@ Manager. Since we are an
 		
 		if (success) {
 			PHContentView.pushContent(content, this, null);
-			
 			// tell the webview (through javascript) the sub request has
 			// succeeded.
-			sub_request.source.sendCallback(sub_request.callback, responseData,
-					null);
+			sub_request.source.sendCallback(sub_request.callback, responseData, null);
 		} else {
 			// inform the webview through javascript the subrequest failed
 			try {
@@ -1189,7 +1206,7 @@ Manager. Since we are an
 				sub_request.source.sendCallback(sub_request.callback,
 						responseData, error_dict);
 
-					delegate.didDismiss(this, PHDismissType.ApplicationTriggered);
+				delegate.didDismiss(this, PHDismissType.ApplicationTriggered);
 
 			} catch (JSONException e) {
 				e.printStackTrace();

@@ -8,6 +8,13 @@ import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Locale;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.FutureTask;
+import java.util.concurrent.ThreadFactory;
+import java.util.concurrent.TimeUnit;
 
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -18,7 +25,7 @@ import com.playhaven.src.additions.ObjectExtensions;
 
 /** Represents a single api request to the server*/
 public class PHAPIRequest implements PHAsyncRequest.PHAsyncRequestDelegate {
-	
+
 	public PHAPIRequestDelegate delegate;
 	
 	private PHAsyncRequest conn;
@@ -35,11 +42,39 @@ public class PHAPIRequest implements PHAsyncRequest.PHAsyncRequestDelegate {
 	
 	private int hashCode;
 	
-	private static ArrayList<PHAPIRequest> allRequests;
+	private static ArrayList<PHAPIRequest> allRequests = new ArrayList<PHAPIRequest>();
 	
 	// protected so subclasses can access it. You shouldn't.
 	protected String fullUrl;
-	
+
+    static class LookupService {
+        ExecutorService executor;
+
+        private LookupService() {
+            executor = Executors.newSingleThreadExecutor(new ThreadFactory() {
+                public Thread newThread(Runnable r) {
+                    Thread t = new Thread(r);
+                    t.setDaemon(true);
+                    return t;
+                }
+            });
+        }
+
+        static LookupService create() {
+            return new LookupService();   
+        }
+
+        Future<InetAddress> getByName(final String host) {
+            FutureTask<InetAddress> future = new FutureTask<InetAddress>(new Callable<InetAddress>() {
+                public InetAddress call() throws UnknownHostException {
+                    return InetAddress.getByName(host);
+                }
+            });
+            executor.execute(future);
+            return future;
+        }
+    }
+
 	/** The delegate interface all delegates must implement*/
 	public static interface PHAPIRequestDelegate {
 		public void requestSucceeded(PHAPIRequest request, JSONObject responseData);
@@ -90,39 +125,44 @@ public class PHAPIRequest implements PHAsyncRequest.PHAsyncRequestDelegate {
 	
 	/** Cancels all requests which have the specified delegate. */
 	public static void cancelRequests(PHAPIRequestDelegate delegate) {
-		for (PHAPIRequest request : PHAPIRequest.getAllRequests()) {
-			if (request.delegate == delegate) {
-				request.cancel();
+		synchronized (allRequests) {
+			for (PHAPIRequest request : PHAPIRequest.getAllRequests()) {
+				if (request.delegate == delegate) {
+					request.cancel();
+				}	
 			}
-			
 		}
 	}
 	
 	public static ArrayList<PHAPIRequest> getAllRequests() {
 		if (allRequests == null) {
-			// On first request only do a DNS lookup to speed up future requests
+			// Calling this causes a NetworkGuard exception in Level API 11
 	        PHConstants.Environment environ = new PHConstants.Environment();
-			try {
-				InetAddress.getByName(environ.getAPIServerAddress());
-				InetAddress.getByName(environ.getMediaServerAddress());
-
-			} catch (UnknownHostException e) {
+	        LookupService service = LookupService.create();
+	        Future<InetAddress> apiServerFuture = service.getByName(environ.getAPIServerAddress());
+	        Future<InetAddress> mediaServerFuture = service.getByName(environ.getAPIServerAddress());
+	        try {
+	        	apiServerFuture.get(10L, TimeUnit.SECONDS);
+	        	mediaServerFuture.get(10L, TimeUnit.SECONDS);
+			} catch (Exception e) {
 				// TODO Auto-generated catch block
-				PHConstants.phLog("UnknowHostException: "+e.getMessage());
-
+				e.printStackTrace();
 			}
-			allRequests = new ArrayList<PHAPIRequest>();
 		}
 		
 		return allRequests;
 	}
 	
 	public static void addRequest(PHAPIRequest request) {
-		PHAPIRequest.getAllRequests().add(request);
+		synchronized (allRequests) {
+			PHAPIRequest.getAllRequests().add(request);
+		}
 	}
 	
 	public static void removeRequest(PHAPIRequest request) {
-		PHAPIRequest.getAllRequests().remove(request);
+		synchronized (allRequests) {
+			PHAPIRequest.getAllRequests().remove(request);
+		}
 	}
 	
 	///////////////////////////////////////////////
@@ -151,7 +191,7 @@ public class PHAPIRequest implements PHAsyncRequest.PHAsyncRequestDelegate {
 			appVersion = PHConstants.getAppVersion();
 			hardware = PHConstants.getDeviceModel();
 			os = String.format("%s %s", PHConstants.getOSName(), PHConstants.getOSVersion());
-			sdk_version = PHConstants.getAppVersion();
+			sdk_version = PHConstants.getSDKVersion();
 			sdk_platform = "android";
 			width = String.valueOf(PHConstants.getOriginalWidth());
 			height = String.valueOf(PHConstants.getOriginalHeight());
@@ -334,6 +374,11 @@ public class PHAPIRequest implements PHAsyncRequest.PHAsyncRequestDelegate {
 		//TODO: handle progress updates (currently not interested)
 		
 	}
-	
-	
+
+	@Override
+	public void redirectMarketURL(String url) {
+		// TODO Auto-generated method stub
+		
+	}
+
 }

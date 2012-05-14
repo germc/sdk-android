@@ -96,8 +96,7 @@ public class PublisherContentView extends ExampleView implements PHPublisherCont
 
 	public void didDisplayContent(PHPublisherContentRequest request, PHContent content) {
 		String message = String.format("Displayed Content: %s", content);
-		super.addMessage(message);
-		
+		super.addMessage(message);		
 	}
 
 	public void didDismissContent(PHPublisherContentRequest request, PHPublisherContentRequest.PHDismissType type) {
@@ -156,4 +155,5 @@ public class PublisherContentView extends ExampleView implements PHPublisherCont
 		// TODO Auto-generated method stub
 		return null;
 	}
+
 }

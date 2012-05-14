@@ -167,4 +167,5 @@ public class PHNotificationView extends View implements PHAPIRequest.PHAPIReques
 		this.request = null;
 		updateNotificationData(null);
 	}
+
 }

@@ -9,6 +9,7 @@ import android.content.Intent;
 import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.preference.PreferenceManager;
+import android.text.InputFilter;
 import android.util.Patterns;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -53,6 +54,11 @@ public class SampleApp extends ListActivity {
 		View view = inflater.inflate(R.layout.sample_header, null);
 		// add to top bar
 		getListView().addHeaderView(view);
+		
+		EditText tokenEditText = (EditText) findViewById(R.id.editTextToken);
+		InputFilter[] filterArray = new InputFilter[1];
+		filterArray[0] = new InputFilter.LengthFilter(40);
+		tokenEditText.setFilters(filterArray);
 	}
 
 	private void initializeEditTextFields() {

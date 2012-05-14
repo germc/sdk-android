@@ -56,5 +56,4 @@ public class PublisherOpenView extends ExampleView implements PHAPIRequest.PHAPI
 		
 	}
 	
-	
 }

@@ -1,4 +1,4 @@
-PlayHaven Android SDK 1.10.1
+PlayHaven Android SDK 1.10.2
 ====================
 PlayHaven is a real-time mobile game marketing platform to help you take control of the business of your games.
 
@@ -6,7 +6,20 @@ Acquire, retain, re-engage, and monetize your players with the help of PlayHaven
 
 An API token and secret is required to use this SDK. These tokens uniquely identify your app to PlayHaven and prevent others from making requests to the API on your behalf. To get a token and secret, please visit the PlayHaven developer dashboard at https://dashboard.playhaven.com
 
-What's new in 1.10.1
+What's new in 1.10.2
+===================
+* Fixed the "close_ping" exception when content doesn't contain the variable in the
+  JSON string returned from the server.
+* Changed the networking code so that it is called from a background thread and not on the main UIThread.
+* The "market:" scheme is now handled properly by the content view. If the marketplace is available it will open the google store and if not then it will open the google play URL in the browser.
+* Fixed bug with marketplace being called and the PHAsyncRequest not canceling properly.
+* Added support for didDisplayContent()
+* The didDismissContent() is called once now. Cleaned up BroadcastReceiver after content is dismissed.
+* Commented out prefetch code on the open request and the content provider to load cached content. If publishers want to use this code please subclass and use a different class name for the content provider.
+  Register your unique class name in the AndroidManifest.xml so as not to conflict with other publishers using our SDK. This will be resolved in a future release. Moving our content provider to an abstract
+  base class and loading it using PHConstants.java variables.
+
+1.10.1
 ===================
 * Fixed Full screen content not showing up.
 * Fixed "market://" exception causing content templates not to close on redirect.

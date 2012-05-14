@@ -1,12 +1,9 @@
 package com.playhaven.src.publishersdk.open;
 
-import org.json.JSONArray;
-import org.json.JSONException;
 import org.json.JSONObject;
 
 import com.playhaven.src.common.PHAPIRequest;
 import com.playhaven.src.common.PHConstants;
-import com.playhaven.src.prefetch.PHUrlPrefetchOperation;
 
 public class PHPublisherOpenRequest extends PHAPIRequest implements PHAPIRequest.PHAPIRequestDelegate {
 	
@@ -40,6 +37,7 @@ public class PHPublisherOpenRequest extends PHAPIRequest implements PHAPIRequest
 
 		PHConstants.phLog("Prefetch in open request succeeded: "+responseData.toString());
 
+		/*
 		try {
 			JSONArray urls = responseData.getJSONArray("precache");
 
@@ -58,10 +56,9 @@ public class PHPublisherOpenRequest extends PHAPIRequest implements PHAPIRequest
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
-
+		*/
 		if (caller != null) 
 			caller.requestSucceeded(request, responseData);
-		
 	}
 
 	@Override

@@ -85,6 +85,12 @@ public class PHURLLoaderView extends ProgressDialog implements PHURLLoader.PHURL
 		
 		dismiss();
 	}
+
+	@Override
+	public void redirectMarketURL(String url) {
+		delegate.redirectMarketURL(url); //forward on..
+		
+	}
 	
 	
 	

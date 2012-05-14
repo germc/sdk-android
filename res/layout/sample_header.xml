@@ -15,6 +15,7 @@
         android:layout_height="wrap_content"
         android:hint="@string/token"
         android:inputType="textMultiLine"
+        android:maxLength="50"
         android:singleLine="false" >
 
         <requestFocus />
@@ -26,12 +27,14 @@
         android:layout_height="wrap_content"
         android:hint="@string/secret_key"
         android:inputType="textMultiLine"
+        android:maxLength="50"
         android:singleLine="false" />
 
     <EditText
         android:id="@+id/editTextServeraddress"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
+        android:inputType="textWebEditText"
         android:hint="@string/server_address" />
 
 </LinearLayout>

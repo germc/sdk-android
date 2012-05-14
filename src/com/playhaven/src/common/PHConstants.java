@@ -187,6 +187,9 @@ public class PHConstants {
 			return true;
 		}
 		
+		public boolean useStrictMode() {
+			return true;
+		}
 		public float dipToPixels(float dip) {
 			return TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, dip, displayMetrics.get());
 		}
@@ -284,7 +287,7 @@ public class PHConstants {
 		}
 		
 		public String getSDKVersion() {	
-			return "1.10.1";
+			return "1.10.2";
 		}
 		
 		public int getProtocolVersion() {

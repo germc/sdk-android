@@ -1,5 +1,8 @@
 package com.playhaven.src.publishersdk.content;
 
+import java.lang.ref.WeakReference;
+
+import android.content.Context;
 import android.content.Intent;
 import android.os.Parcel;
 import android.os.Parcelable;

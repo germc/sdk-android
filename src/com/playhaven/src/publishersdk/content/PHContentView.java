@@ -1,7 +1,5 @@
 package com.playhaven.src.publishersdk.content;
 
-import java.io.File;
-import java.lang.ref.WeakReference;
 import java.lang.reflect.Method;
 import java.util.Dictionary;
 import java.util.HashMap;
@@ -26,7 +24,6 @@ import android.graphics.drawable.ColorDrawable;
 import android.graphics.drawable.StateListDrawable;
 import android.net.Uri;
 import android.os.Bundle;
-import android.os.Environment;
 import android.os.Handler;
 import android.view.MotionEvent;
 import android.view.View;
@@ -56,9 +53,7 @@ import com.playhaven.src.common.PHURLLoaderView;
 import com.playhaven.src.common.jsbridge.PHInvocation;
 import com.playhaven.src.common.jsbridge.PHJavascriptBridge;
 import com.playhaven.src.common.jsbridge.PHJavascriptStub;
-import com.playhaven.src.prefetch.PHUrlPrefetchOperation;
 import com.playhaven.src.publishersdk.content.PHPublisherContentRequest.PHDismissType;
-
 import com.playhaven.src.publishersdk.purchases.PHPublisherIAPTrackingRequest;
 
 /**
@@ -292,6 +287,8 @@ public class PHContentView extends Activity implements
 			 * webview.loadUrl forks another page request if(delegate != null)
 			 * delegate.didLoad(PHContentView.this);
 			 */
+			if (delegate != null)
+				delegate.didLoad(PHContentView.this);
 		}
 
 		@Override
@@ -356,31 +353,6 @@ public class PHContentView extends Activity implements
 			} else if (url.startsWith("javascript:")) {
 				PHConstants.phLog("Executing javascript..");
 				return false; // let browser handle javascript requests..
-			} else if (url.startsWith("market:")) {
-				PHConstants.phLog("Got a market:// URL, verifying store exists");
-				Context context = PHContentView.this;
-				final PackageManager packageManager = context.getPackageManager();
-				//String packagename = PHContentView.this.getPackageName();
-				//String mUrl = "market://details?id=" + packagename;
-				Intent marketplaceIntent = new Intent(Intent.ACTION_VIEW);
-				marketplaceIntent.setData(Uri.parse(url));
-				List<ResolveInfo> resolveInfo = packageManager.queryIntentActivities(marketplaceIntent,PackageManager.MATCH_DEFAULT_ONLY);
-				if (resolveInfo.size() > 0)
-				{
-					//PHConstants.phLog("Found Marketplace and Starting Intent to load it with url...");
-					//startActivity(marketplaceIntent);
-					PHConstants.phLog("Found Marketplace continue loading url...");
-					webview.loadUrl(url);
-				}
-				else
-				{
-					PHConstants.phLog("Marketplace NOT found, updating url...");
-					Uri uri = Uri.parse(url);
-					url = String.format("%s://%s%s", "https", "market.android.com", uri.getPath());
-					PHConstants.phLog("New Marketplace url = " + url);
-					webview.loadUrl(url);
-				}
-
 			} else {
 				PHConstants.phLog("Webview redirecting...");
 				webview.loadUrl(url); // handle redirect...
@@ -398,10 +370,6 @@ public class PHContentView extends Activity implements
 	 * delegate public.
 	 */
 	private PHContentViewDelegate delegate;
-
-	public WeakReference<Object> creator; // used for PHContentView recycling
-
-	View targetView;
 
 	///////////////////////////////////////////////////////////
 	//////////////// Broadcast (Delegate) /////////////////////
@@ -424,8 +392,7 @@ public class PHContentView extends Activity implements
 	}
 
 	/**
-	 * Adapter bridge between actual code and 
-Manager. Since we are an
+	 * Adapter bridge between actual code and Manager. Since we are an
 	 * activity, we cannot simply call delegate methods directly.
 	 */
 	public class PHContentViewDelegateBroadcaster implements
@@ -472,7 +439,8 @@ Manager. Since we are an
 		}
 
 		public void didLoad(PHContentView view) {
-			sendStateUpdate("didLoad");
+			//sendStateUpdate("didLoad");
+			sendStateUpdate(PHBroadcastEvent.DidLoad.getKey());
 		}
 
 		public void didDismiss(PHContentView view, PHDismissType type) {
@@ -582,7 +550,10 @@ Manager. Since we are an
 	private void buttonDismiss() {
 		PHConstants.phLog("The content unit was dismissed by the user");
 		
-		delegate.didDismiss(this, PHDismissType.CloseButtonTriggered);
+		if (delegate != null) {
+			delegate.didDismiss(this, PHDismissType.CloseButtonTriggered);
+			delegate = null;
+		}
 
 		this.finish();
 	}
@@ -618,7 +589,6 @@ Manager. Since we are an
 		// TODO: rotate image since user may provide a custom image.
 
 		// make sure close btn isn't attached
-		// TODO: bit hacky?
 		if (close.getParent() != null) {
 			ViewGroup detailParent = (ViewGroup) close.getParent();
 			detailParent.removeView(close);
@@ -686,7 +656,10 @@ Manager. Since we are an
 		if (this.getIsBackBtnCancelable()) {
 			PHConstants.phLog("The content unit was dismissed by the user using back button");
 			
-			delegate.didDismiss(this, PHDismissType.CloseButtonTriggered);
+			if (delegate != null) {
+				delegate.didDismiss(this, PHDismissType.CloseButtonTriggered);
+				delegate = null;
+			}
 
 			super.onBackPressed();
 		}
@@ -703,13 +676,6 @@ Manager. Since we are an
 			webview.setWebChromeClient(null);
 			webview.setWebViewClient(null);
 		}
-
-		PHAPIRequest.cancelRequests(this);
-		
-		// TODO: make sure to cleanup and remove ourselves from static
-		// collection
-
-		// TODO: call the appropriate delegate method
 
 		// stop close button
 		if (closeBtnDelay != null)
@@ -793,10 +759,6 @@ Manager. Since we are an
 
 	public RelativeLayout getRootView() {
 		return rootView;
-	}
-
-	public void setCreator(Object creator) {
-		this.creator = new WeakReference<Object>(creator);
 	}
 
 	public void setContent(PHContent content) {
@@ -912,21 +874,28 @@ Manager. Since we are an
 
 		// debugging only
 		//webview.setBackgroundColor(0xFFF7C66A);
+		webview.setBackgroundColor(Color.TRANSPARENT);
 
 		if (!PHConstants.shouldCacheWebView())
 			webview.getSettings().setCacheMode(WebSettings.LOAD_NO_CACHE);
 		else {
 			webview.getSettings().setCacheMode(WebSettings.LOAD_DEFAULT);
 			webview.getSettings().setAppCacheMaxSize(Development.MAX_CACHE_SIZE);                         
-			webview.getSettings().setAppCachePath(Development.APP_CACHE_PATH);
+			//webview.getSettings().setAppCachePath(Development.APP_CACHE_PATH);
+			String appCachePath = getApplicationContext().getCacheDir().getAbsolutePath();
+			webview.getSettings().setAppCachePath(appCachePath);
 			webview.getSettings().setAllowFileAccess(true);
 			webview.getSettings().setAppCacheEnabled(true);
 			webview.getSettings().setDomStorageEnabled(true);
-			
+			webview.getSettings().setDatabaseEnabled(true);
 		}
 
-		// TODO: find more elegant method of fixing the scaling issue?
-		hackEnableScaling();
+		// Enables scaling via the HTML <viewport> tag in the WebView
+		// Ensure the scaling works correctly
+		webview.getSettings().setUseWideViewPort(true);
+		webview.getSettings().setSupportZoom(true);
+		webview.getSettings().setLoadWithOverviewMode(true);
+		webview.setInitialScale(0);
 
 		// TODO: in the future the *webview* frame will change instead of the
 		// entire dialog frame..
@@ -957,15 +926,6 @@ Manager. Since we are an
 		showCloseAfterTimeout(CLOSE_BTN_TIMEOUT);
 
 		// TODO: signup for orientation notifications
-	}
-
-	/** Enables scaling via the HTML <viewport> tag in the WebView (hacky) */
-	private void hackEnableScaling() {
-		// Hack to ensure the scaling works correctly
-		webview.getSettings().setUseWideViewPort(true);
-		webview.getSettings().setSupportZoom(true);
-		webview.getSettings().setLoadWithOverviewMode(true);
-		webview.setInitialScale(0);
 	}
 
 	/**
@@ -1023,6 +983,7 @@ Manager. Since we are an
 
 	        Uri url = PHConstants.getTemplateURL(content); // different depending on
 														// dev, staging, prod...
+	        /*
 	        String cache_path = Environment.getExternalStorageDirectory() + Development.PLAYHAVEN_PREFETCH_CACHE_PATH;
 	        PHConstants.phLog("prefetch cache path: " + cache_path);
 	        File cacheDir = new File(cache_path);
@@ -1031,16 +992,18 @@ Manager. Since we are an
 	        String fileCacheName = PHUrlPrefetchOperation.cacheKeyForURL(newLocalUrl);
 	        PHConstants.phLog("prefetch cache file name: " + fileCacheName);
 			File newCacheFile = new File(cacheDir, fileCacheName);
-	
+
 			if (newCacheFile.exists()) {
 		        PHConstants.phLog("prefetching local url: " + newLocalUrl);
 		        webview.loadUrl(newLocalUrl);
+		        webview.loadUrl(newLocalUrl);
 			}
 			else {
+			*/
 		        PHConstants.phLog("Loading url in intial webview load: " + url);
 				webview.loadUrl(url.toString());
 				
-			}
+			//}
 		
 		} catch (Exception e) {
 			// TODO Auto-generated catch block
@@ -1060,20 +1023,7 @@ Manager. Since we are an
 		if (delegate == null)
 			return;
 
-		/**
-		 * TODO: make sure the appropriate delegate callbacks are being called only once
-		 * 		// we do this to avoid redundant api callbacks
-		PHContentViewDelegate oldndelegate;
-		delegate = null;
-
-		closeView(isAnimated); // will null delegate..
-
-		// TODO: make sure we don't call didFial method twice
-		oldDelegate.didFail(this, error);
-		 */
 		closeView();
-
-
 	}
 
 	private void closeView() {
@@ -1206,7 +1156,10 @@ Manager. Since we are an
 				sub_request.source.sendCallback(sub_request.callback,
 						responseData, error_dict);
 
-				delegate.didDismiss(this, PHDismissType.ApplicationTriggered);
+				if (delegate != null) {
+					delegate.didDismiss(this, PHDismissType.ApplicationTriggered);
+					delegate = null;
+				}
 
 			} catch (JSONException e) {
 				e.printStackTrace();
@@ -1223,6 +1176,32 @@ Manager. Since we are an
 			sub_request.source.sendCallback(sub_request.callback, null, error);
 		} catch (JSONException ex) {
 			ex.printStackTrace();
+		}
+	}
+
+	public void redirectMarketURL(String url) {
+		if (url.startsWith("market:")) {
+			PHConstants.phLog("Got a market:// URL, verifying store exists");
+			Context context = PHContentView.this;
+			final PackageManager packageManager = context.getPackageManager();
+			//String packagename = PHContentView.this.getPackageName();
+			//String mUrl = "market://details?id=" + packagename;
+			Intent marketplaceIntent = new Intent(Intent.ACTION_VIEW);
+			marketplaceIntent.setData(Uri.parse(url));
+			List<ResolveInfo> resolveInfo = packageManager.queryIntentActivities(marketplaceIntent,PackageManager.MATCH_DEFAULT_ONLY);
+			if (resolveInfo.size() > 0)
+			{
+				PHConstants.phLog("Found Marketplace and Starting Intent to load it with url...");
+				startActivity(marketplaceIntent);
+			}
+			else {
+				PHConstants.phLog("Marketplace NOT found, updating url so opens in browser...");
+				Uri uri = Uri.parse(url);
+				url = String.format("%s://%s/%s?%s", "https", "market.android.com", uri.getHost(), uri.getQuery());
+				PHConstants.phLog("New Marketplace url = " + url);
+				Intent browserIntent = new Intent(Intent.ACTION_VIEW, Uri.parse(url));
+				startActivity(browserIntent);
+			}
 		}
 	}
 
@@ -1271,7 +1250,8 @@ Manager. Since we are an
 				reward.receipt = ObjectExtensions.JSONExtensions.getJSONString(
 						rewardData, PHRewardKey.ReceiptKey.key());
 
-				delegate.didUnlockReward(this, reward);
+				if (delegate != null)
+					delegate.didUnlockReward(this, reward);
 			}
 
 		}
@@ -1296,7 +1276,8 @@ Manager. Since we are an
 				String cookie = ObjectExtensions.JSONExtensions.getJSONString(purchaseData, PHPurchaseKey.CookieKey.key());
 	            PHPublisherIAPTrackingRequest.setConversionCookie(cookie, purchase.productIdentifier);
 
-            	delegate.didMakePurchase(this, purchase);
+				if (delegate != null)
+					delegate.didMakePurchase(this, purchase);
 			}
 			
 		}
@@ -1378,6 +1359,10 @@ Manager. Since we are an
 		sendCallback(ObjectExtensions.JSONExtensions.getJSONString(jsonContext,
 				"callback"), response, null);
 
+		if (delegate != null)
+			delegate.didDismiss(this, PHDismissType.ContentUnitTriggered);
+	
+		dismiss();
 	}
 
 	public void loaderFailed(PHURLLoader loader) {
@@ -1392,6 +1377,10 @@ Manager. Since we are an
 		sendCallback(ObjectExtensions.JSONExtensions.getJSONString(jsonContext,
 				"callback"), response, error);
 
+		if (delegate != null)
+			delegate.didDismiss(this, PHDismissType.NoContentTriggered);
+		
+		dismiss();
 	}
 
 }

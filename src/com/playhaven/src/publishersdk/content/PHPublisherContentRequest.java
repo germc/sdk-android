@@ -14,6 +14,7 @@ import android.content.IntentFilter;
 import android.graphics.Bitmap;
 import android.graphics.drawable.BitmapDrawable;
 import android.os.Bundle;
+//import android.os.StrictMode;
 
 import com.playhaven.src.common.PHAPIRequest;
 import com.playhaven.src.common.PHConstants;
@@ -28,6 +29,7 @@ public class PHPublisherContentRequest extends PHAPIRequest implements PHContent
 	private WeakReference<Context> applicationContext; // should be the main Application context
 	
 	private WeakReference<Context> activityContext; // should be an activity context
+	
 	public boolean isAnimated = true;
 	
 	private boolean showsOverlayImmediately = false;
@@ -45,8 +47,6 @@ public class PHPublisherContentRequest extends PHAPIRequest implements PHContent
 		Done
 	};
 	
-
-	
 	public enum PHDismissType {
 		ContentUnitTriggered, // content template dismissal
 		CloseButtonTriggered, // called from close button
@@ -56,6 +56,8 @@ public class PHPublisherContentRequest extends PHAPIRequest implements PHContent
 	
 	private PHRequestState state;
 	
+	//private BroadcastReceiver contentBroadcastReceiver = null;
+
 	private PHRequestState targetState;
 	
 	/** Big ol' extra delegate methods that a delegate can implement for more detail. {@link PHPublisherContentRequest} will work just
@@ -127,14 +129,14 @@ public class PHPublisherContentRequest extends PHAPIRequest implements PHContent
 			failure_delegate = (PHFailureDelegate)delegate;
 		else {
 			failure_delegate = null;
-			PHConstants.phLog("*** PHFailureDelegate is not implemented. Implement is want to be notified of failed content downloads.");
+			PHConstants.phLog("*** PHFailureDelegate is not implemented. Implement if want to be notified of failed content downloads.");
 		}
 		
 		if (delegate instanceof PHPublisherContentRequestDelegate)
 			content_delegate = (PHPublisherContentRequestDelegate)delegate;
 		else {
 			content_delegate = null;
-			PHConstants.phLog("*** PHPublisherContentRequestDelegate is not implemented. Implement is want to be notified of content request states.");
+			PHConstants.phLog("*** PHPublisherContentRequestDelegate is not implemented. Implement if want to be notified of content request states.");
 		}
 
 	}
@@ -145,7 +147,7 @@ public class PHPublisherContentRequest extends PHAPIRequest implements PHContent
 		this.placement = placement;
 	}
 	
-	public PHPublisherContentRequest(PHPublisherContentRequestDelegate  delegate, Activity activity) {
+	public PHPublisherContentRequest(PHPublisherContentRequestDelegate delegate, Activity activity) {
 		super(delegate);
 		setDelegates(delegate);
 		
@@ -157,6 +159,23 @@ public class PHPublisherContentRequest extends PHAPIRequest implements PHContent
 		registerReceiver();
 		
 		setState(PHRequestState.Initialized);
+		
+		/*
+		// NOTE: Not available in level 8 which is our minimum supported SDK
+		// for catching ANR errors (timeouts)
+		if (PHConstants.getEnvironment().useStrictMode()) {
+	         StrictMode.setThreadPolicy(new StrictMode.ThreadPolicy.Builder()
+	                 .detectAll()
+	                 .penaltyLog()
+	                 .build());
+	         
+	         StrictMode.setVmPolicy(new StrictMode.VmPolicy.Builder()
+	                 .detectLeakedSqlLiteObjects()
+	                 .penaltyLog()
+	                 .penaltyDeath()
+	                 .build());
+		}
+		*/
 	}
 	
 	@Override
@@ -181,7 +200,7 @@ public class PHPublisherContentRequest extends PHAPIRequest implements PHContent
 		return state;
 	}
 	
-	//------------------
+	//////////////////////////////////////////////////
 	// Allows optional content delegate (instead of just PHAPIRequestDelegate)
 	//////////////////////////////////////////////////
 	
@@ -200,8 +219,7 @@ public class PHPublisherContentRequest extends PHAPIRequest implements PHContent
 			}
 		}
 		return null;
-	}
-	
+	}	
 	
 	/////////////////////////////////////////////////
 
@@ -218,8 +236,7 @@ public class PHPublisherContentRequest extends PHAPIRequest implements PHContent
 		
 		if(content_delegate != null)
 			content_delegate.willGetContent(this);
-		
-		
+
 	}
 	
 	private void showContent() {
@@ -242,6 +259,9 @@ public class PHPublisherContentRequest extends PHAPIRequest implements PHContent
 			}
 			
 			PHContentView.pushContent(content, activityContext.get(), customClose);
+
+			if(content_delegate != null) 
+				content_delegate.didDisplayContent(this, content);
 		}
 	}
 	
@@ -264,12 +284,8 @@ public class PHPublisherContentRequest extends PHAPIRequest implements PHContent
 	public void send() {
 		targetState = PHRequestState.DisplayingContent;
 		
-		//TODO: worry about overlay?
-		
 		if(content_delegate != null)
 			content_delegate.willGetContent(this);
-		
-		//TODO: show some sort of dialog with close option
 		
 		continueLoading();
 	}
@@ -277,10 +293,6 @@ public class PHPublisherContentRequest extends PHAPIRequest implements PHContent
 	@Override
 	public void finish() {
 		setState(PHRequestState.Done);
-		
-		
-		//TODO: hide overlay
-		//TODO: hide close dialog (see `send()`)
 		
 		super.finish();
 	}
@@ -313,11 +325,8 @@ public class PHPublisherContentRequest extends PHAPIRequest implements PHContent
 		// the default success handler on the delegate. (since we still have the 
 		// sub-request to make)
 		if(success) {
-			if(content_delegate != null)
-				content_delegate.willDisplayContent(this, content);
 			
-			setState(PHRequestState.Preloaded);
-			
+			setState(PHRequestState.Preloaded);			
 			continueLoading();
 		} else {
 			delegate.requestFailed(this, new JSONException("Couldn't parse respone into PHContent"));
@@ -329,79 +338,93 @@ public class PHPublisherContentRequest extends PHAPIRequest implements PHContent
 	/////////////////////////////////////////////////////////////////////
 	/////////////////// Broadcast Routing Methods ///////////////////////
 	private void registerReceiver() {
+		
 		if (applicationContext.get() != null) {
-			applicationContext.get().registerReceiver(new BroadcastReceiver() {
-				//TODO: actually pass real arguments back..
-				@Override
-				public void onReceive(Context context, Intent intent) {
-					Bundle extras = intent.getExtras();
-					String event = extras.getString(PHContentView.PHBroadcastKey.Event.getKey());
+			
+			//if (contentBroadcastReceiver == null) {
+				
+				//applicationContext.get().registerReceiver(contentBroadcastReceiver = new BroadcastReceiver() {
+				applicationContext.get().registerReceiver(new BroadcastReceiver() {
 					
-					if (event.equals(PHContentView.PHBroadcastEvent.DidShow.getKey())) {
-						didShow(null);
-					} else if (event.equals(PHContentView.PHBroadcastEvent.DidLoad.getKey())) {
-						didLoad(null);
-					} else if (event.equals(PHContentView.PHBroadcastEvent.DidDismiss.getKey())) {
-						PHDismissType type = PHDismissType.valueOf(extras.getString(PHContentView.PHBroadcastKey.CloseType.getKey()));
+					@Override
+					public void onReceive(Context context, Intent intent) {
+						Bundle extras = intent.getExtras();
+						String event = extras.getString(PHContentView.PHBroadcastKey.Event.getKey());
+					
+						if (event.equals(PHContentView.PHBroadcastEvent.DidShow.getKey()))
+							didShow(null);
 						
-						didDismiss(null, type);
-					} else if (event.equals(PHContentView.PHBroadcastEvent.DidFail.getKey())) {
-						String error = extras.getString(PHContentView.PHBroadcastKey.Error.getKey());
+						else if (event.equals(PHContentView.PHBroadcastEvent.DidLoad.getKey()))
+							didLoad(null);
 						
-						didFail(null, error);
-					} else if (event.equals(PHContentView.PHBroadcastEvent.DidSendSubrequest.getKey())) {
-						String callback = extras.getString(PHContentView.PHBroadcastKey.Callback.getKey());
-						String jsonContextStr = extras.getString(PHContentView.PHBroadcastKey.Context.getKey());
-						JSONObject jsonContext = null;
+						else if (event.equals(PHContentView.PHBroadcastEvent.DidDismiss.getKey())) {
+							PHDismissType type = PHDismissType.valueOf(extras.getString(PHContentView.PHBroadcastKey.CloseType.getKey()));
 						
-						try {
-							jsonContext = new JSONObject(jsonContextStr);
-						} catch (JSONException e) {
-							PHConstants.phLog("Could not parse JSON in PHContentView didSendSubrequest callback.");
+							didDismiss(null, type);
+							
+						} else if (event.equals(PHContentView.PHBroadcastEvent.DidFail.getKey())) {
+							String error = extras.getString(PHContentView.PHBroadcastKey.Error.getKey());
+						
+							didFail(null, error);
+							
+						} else if (event.equals(PHContentView.PHBroadcastEvent.DidSendSubrequest.getKey())) {
+							String callback = extras.getString(PHContentView.PHBroadcastKey.Callback.getKey());
+							String jsonContextStr = extras.getString(PHContentView.PHBroadcastKey.Context.getKey());
+							JSONObject jsonContext = null;
+						
+							try {
+								jsonContext = new JSONObject(jsonContextStr);
+							} catch (JSONException e) {
+								PHConstants.phLog("Could not parse JSON in PHContentView didSendSubrequest callback.");
+							}
+						
+							didSendSubrequest(jsonContext, callback, null);
+						
+						} else if (event.equals(PHContentView.PHBroadcastEvent.DidUnlockReward.getKey())) {
+							PHReward reward = extras.getParcelable(PHContentView.PHBroadcastKey.Reward.getKey());
+						
+							didUnlockReward(null, reward);
+							
+						} else if (event.equals(PHContentView.PHBroadcastEvent.DidMakePurchase.getKey())) {
+							PHPurchase purchase = extras.getParcelable(PHContentView.PHBroadcastKey.Purchase.getKey());
+						
+							didMakePurchase(null, purchase);
 						}
-						
-						didSendSubrequest(jsonContext, callback, null);
-						
-					} else if (event.equals(PHContentView.PHBroadcastEvent.DidUnlockReward.getKey())) {
-						PHReward reward = extras.getParcelable(PHContentView.PHBroadcastKey.Reward.getKey());
-						
-						didUnlockReward(null, reward);
-					} else if (event.equals(PHContentView.PHBroadcastEvent.DidMakePurchase.getKey())) {
-						PHPurchase purchase = extras.getParcelable(PHContentView.PHBroadcastKey.Purchase.getKey());
-						
-						didMakePurchase(null, purchase);
-					}
 					
-				}
-			}, new IntentFilter(PHContentView.PHBroadcastKey.Action.getKey()));
-		}
+					}
+				}, new IntentFilter(PHContentView.PHBroadcastKey.Action.getKey()));
+			}
+		//}
 	}
 	
 	//////////////////////////////////////////////////////////////////
 	//// PHContentView methods (Called from BroadcastReciever) ///////
 	
 	public void didShow(PHContentView view) {
-		// TODO Auto-generated method stub
 		
 	}
 
 
 	public void didLoad(PHContentView view) {
-		if(content_delegate != null) 
-			content_delegate.didDisplayContent(this, view.getContent());
+
 	}
 
 	public void didDismiss(PHContentView view, PHDismissType type) {
 		
 		if(content_delegate != null) 
 			content_delegate.didDismissContent(this, type);
-		
+
+		//applicationContext.get().unregisterReceiver(contentBroadcastReceiver);
+		//contentBroadcastReceiver = null;
 	}
 
 	public void didFail(PHContentView view, String error) {
 		
 		if(failure_delegate != null) 
 			failure_delegate.didFail(this, error);
+
+		//applicationContext.get().unregisterReceiver(contentBroadcastReceiver);
+		//contentBroadcastReceiver = null;
 	}
 
 	public void didUnlockReward(PHContentView view, PHReward reward) {
@@ -416,9 +439,7 @@ public class PHPublisherContentRequest extends PHAPIRequest implements PHContent
 		
 	}
 
-	public void didSendSubrequest(JSONObject context, String callback,
-			PHContentView source) {
-		// TODO Auto-generated method stub
+	public void didSendSubrequest(JSONObject context, String callback, PHContentView source) {
 		PHConstants.phLog("Did send subrequest!");
 		
 	}	

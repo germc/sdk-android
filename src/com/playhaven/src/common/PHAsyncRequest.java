@@ -109,6 +109,15 @@ public class PHAsyncRequest extends AsyncTask<Uri, Integer, ByteBuffer> {
 			}
 			@Override
 			public boolean isRedirectRequested(HttpResponse response, HttpContext context) {
+				for(Header header : response.getHeaders("Location")) {
+					PHConstants.phLog("Location from connect:" + header.getValue());
+					String redirectURL = header.getValue();
+					if (redirectURL.contains("market:")) {
+						PHConstants.phLog("PHAsyncRequest market:// redirect to "+redirectURL);
+						delegate.redirectMarketURL(redirectURL);
+						return false;
+					}
+				}
 				PHConstants.phLog("Redirect handler asking if we should redirect?");
 				return shouldRedirect(response);
 			}
@@ -266,12 +275,18 @@ public class PHAsyncRequest extends AsyncTask<Uri, Integer, ByteBuffer> {
 		 * @param progress
 		 */
 		public void requestProgressUpdate(int progress);
+
+		/** Called when a redirect request was made to the "market://" scheme. Passes in
+		 * the redirect URL.
+		 * @param url
+		 */
+		public void redirectMarketURL(String url);
 	}
 
-	protected PHAsyncRequestDelegate delegate;
+	protected static PHAsyncRequestDelegate delegate;
 
 	public PHAsyncRequest(PHAsyncRequestDelegate delegate) {
-		this.delegate = delegate;
+		PHAsyncRequest.delegate = delegate;
 		client = new PHHttpConn();
 		request_type = RequestType.Get;
 	}
@@ -377,13 +392,18 @@ public class PHAsyncRequest extends AsyncTask<Uri, Integer, ByteBuffer> {
 						
 						String redirect = client.getRedirectLocation(response);
 						PHConstants.phLog("Redirect URL: "+redirect);
+
+						// If it is "market:" redirect it has been handled
+						if (redirect.contains("market:")) {
+							return buffer;
+						}
 						
 						addRedirectUrl(redirect);
 						PHConstants.phLog("requesting again (though on current thread)");
 						
-						//we don't call execute because we don't want to spawn another thread. We just
-						//call ourselves directly so that we can do everything on the same thread. Recursive call.
-						this.doInBackground(Uri.parse(redirect));
+						// We need to call execute to support SDK level 11 because we get a strictmode
+						// exception from running the network thread on the uithread (main).
+						this.execute(Uri.parse(redirect));
 					}
 					
 					if (isCancelled()) return null;

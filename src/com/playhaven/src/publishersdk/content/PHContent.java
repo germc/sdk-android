@@ -23,7 +23,6 @@ public class PHContent implements Parcelable {
 	};
 
 	public TransitionType transition = TransitionType.Modal;
-
 	public String closeURL;
 
 	public JSONObject context;
@@ -43,7 +42,6 @@ public class PHContent implements Parcelable {
 	/** Create new PHContent from server json representation */
 	public PHContent(JSONObject dict) {
 		fromJSON(dict);
-
 	}
 	
 	/** Creates from Parcel*/
@@ -86,42 +84,41 @@ public class PHContent implements Parcelable {
 			};
 	/** Attempts to load properties from the specified JSONObject.
 	 * @return true on success, or false on failure.
-	 * @param frame
+	 * @param dict the actual json response from the server.
 	 */
 	public boolean fromJSON(JSONObject dict) {
-		boolean shouldCreate = (dict.has("frame") && dict.has("url") && dict
-				.has("transition"));
 		try {
-			if (shouldCreate == true) {
+			if (dict.has("frame") 
+					&& dict.has("url") 
+					&& dict.has("transition")) {
 
-				Object frame = dict.get("frame");
+				Object frame = dict.opt("frame");
+				frameDict.clear();
 				if (frame instanceof String)
-				{
-					frameDict.clear();
 					frameDict.put((String) frame, new JSONObject(String.format("{\"%s\" : \"%s\"}", frame, frame)));
-				}
 				else if (frame instanceof JSONObject)
 					setFrameDict((JSONObject) frame);
 
-				this.url = Uri.parse(dict.getString("url"));
+				String url = dict.optString("url");
+				this.url = (url != null ? Uri.parse(url) : null);
 
-				String transition = dict.getString("transition");
-				if (transition.equals("PH_MODEL"))
-					this.transition = TransitionType.Modal;
-				else if (transition.equals("PH_DIALOG"))
-					this.transition = TransitionType.Dialog;
+				String transition = dict.optString("transition");
+				if (transition != null) {
+					if (transition.equals("PH_MODEL"))
+						this.transition = TransitionType.Modal;
+					else if (transition.equals("PH_DIALOG"))
+						this.transition = TransitionType.Dialog;
+					else
+						this.transition = null;
+				}
 
-				JSONObject payload = dict.getJSONObject("context");
-				this.context = payload;
-
-				double delay = dict.getDouble("close_delay");
-				if (delay > 0.0)
-					closeButtonDelay = delay;
-
-				String close_url = dict.getString("close_ping");
-				this.closeURL = close_url;
+				this.context = dict.optJSONObject("context");
+				 
+				this.closeButtonDelay = dict.optDouble("close_delay");
+				
+				this.closeURL = dict.optString("close_ping");
+				
 				return true;
-
 			}
 		} catch (JSONException e) {
 			e.printStackTrace();
@@ -131,7 +128,6 @@ public class PHContent implements Parcelable {
 	
 	private void setFrameDict(JSONObject frame) {
 		frameDict.clear();
-		//TODO: verify that the explicit copying is necessary? Perhaps just clone?
 		
 		try {
 			//Note: warning is pointless..'keys' is an iterator of Strings

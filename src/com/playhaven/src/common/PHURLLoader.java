@@ -40,6 +40,7 @@ public class PHURLLoader implements PHAsyncRequest.PHAsyncRequestDelegate {
 	public static interface PHURLLoaderDelegate {
 		public void loaderFinished(PHURLLoader loader);
 		public void loaderFailed(PHURLLoader loader);
+		public void redirectMarketURL(String url);
 	}
 	
 	public PHURLLoader(Context context, PHURLLoaderDelegate delegate) {
@@ -173,5 +174,12 @@ public class PHURLLoader implements PHAsyncRequest.PHAsyncRequestDelegate {
 
 	public void requestProgressUpdate(int progress) {
 		// TODO ignore progress updates..
+	}
+
+	@Override
+	public void redirectMarketURL(String url) {
+		if(delegate != null)
+			delegate.redirectMarketURL(url);
+		
 	}
 }

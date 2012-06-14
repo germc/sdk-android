@@ -25,7 +25,7 @@ Installation
 
 Integrating the Playhaven Android SDK is dead simple and should take no more than a minute. 
 
-**Note:** If you are developing your game using Unity, this instructions are irrelevant and you should use the Playhaven Unity SDK located [here](http://www.playhaven.com/sdk).
+**Note:** If you are developing your game using Unity, this instructions are irrelevant and you should use the Playhaven Unity SDK located [here](http://playhaven-sdk-builds.s3.amazonaws.com/android/jars/playhaven-1.10.3.jar).
 
 ### JAR Integration
 

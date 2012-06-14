@@ -25,11 +25,11 @@ Installation
 
 Integrating the Playhaven Android SDK is dead simple and should take no more than a minute. 
 
-**Note:** If you are developing your game using Unity, this instructions are irrelevant and you should use the Playhaven Unity SDK located [here](http://playhaven-sdk-builds.s3.amazonaws.com/android/jars/playhaven-1.10.3.jar).
+**Note:** If you are developing your game using Unity, this instructions are irrelevant and you should use the Playhaven Unity SDK located [here](https://github.com/playhaven/sdk-unity).
 
 ### JAR Integration
 
-1. Download the Playhaven SDK [here](http://google.com) and ensure you have the latest version of the [Android Developer Tools installed](http://developer.android.com/sdk/eclipse-adt.html#updating).
+1. Download the Playhaven SDK [here](http://playhaven-sdk-builds.s3.amazonaws.com/android/jars/playhaven-1.10.3.jar) and ensure you have the latest version of the [Android Developer Tools installed](http://developer.android.com/sdk/eclipse-adt.html#updating).
 
 2. Install the SDK into your project.
     1. If a __libs__ folder doesn't already exist, create one in your project root. Android will automatically recognize it.
